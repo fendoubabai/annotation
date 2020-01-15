@@ -1,0 +1,1 @@
+include ':app', ':viewfinder', ':viewfinder_compiler', ':viewfinder_annotation'

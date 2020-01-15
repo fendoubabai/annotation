@@ -47,4 +47,11 @@ public class MyButterKnifeActivity extends AppCompatActivity {
         mIv1.setBackgroundResource(R.drawable.ic_launcher_background);
     }
 
+    @OnClick({R.id.iv1})
+    public void onClick(){
+
+        Toast.makeText(mContext,"butterKnife onClick is work",Toast.LENGTH_SHORT).show();
+
+    }
+
 }

@@ -8,9 +8,13 @@ import java.lang.reflect.Constructor;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+
+import com.alibaba.fastjson.JSON;
 import com.example.viewfinder.provider.ActivityProvider;
 import com.example.viewfinder.provider.Provider;
 import com.example.viewfinder.provider.ViewProvider;
+
+import org.json.JSONArray;
 
 /**
  * Created by brucezz on 2016-07-27.
@@ -42,8 +46,7 @@ public class ViewFinder {
         try {
             Finder finder = FINDER_MAP.get(className);
             if (finder == null) {
-//                Class<?> finderClass = Class.forName(className + "$$Finder");
-                Class<?> finderClass = Class.forName(className + "_ViewBinding");
+                Class<?> finderClass = Class.forName(className + "$$Finder");
                 finder = (Finder) finderClass.newInstance();
                 FINDER_MAP.put(className, finder);
             }

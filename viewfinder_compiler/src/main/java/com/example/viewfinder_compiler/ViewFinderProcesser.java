@@ -1,13 +1,13 @@
 package com.example.viewfinder_compiler;
 
-
 import com.example.viewfinder_annotation.BindView;
+import com.example.viewfinder_annotation.OnClick;
+import com.example.viewfinder_compiler.model.AnnotatedClass;
+import com.example.viewfinder_compiler.model.BindViewField;
+import com.example.viewfinder_compiler.model.OnClickMethod;
 import com.google.auto.service.AutoService;
-import com.squareup.javapoet.JavaFile;
-
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -21,91 +21,107 @@ import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.element.VariableElement;
 import javax.lang.model.util.Elements;
 import javax.tools.Diagnostic;
+
 
 @AutoService(Processor.class)
 public class ViewFinderProcesser extends AbstractProcessor {
 
-    private Elements mElementUtils;
-    private HashMap<String, BinderClassCreator> mCreatorMap = new HashMap<>();
+    /**
+     * 使用 Google 的 auto-service 库可以自动生成 META-INF/services/javax.annotation.processing.Processor 文件
+     */
+
+    private Filer mFiler; //文件相关的辅助类
+    private Elements mElementUtils; //元素相关的辅助类
+    private Messager mMessager; //日志相关的辅助类
 
     @Override
-    public synchronized void init(ProcessingEnvironment processingEnvironment) {
-        super.init(processingEnvironment);
-        //processingEnvironment.getElementUtils(); 处理Element的工具类，用于获取程序的元素，例如包、类、方法。
-        //processingEnvironment.getTypeUtils(); 处理TypeMirror的工具类，用于取类信息
-        //processingEnvironment.getFiler(); 文件工具
-        //processingEnvironment.getMessager(); 错误处理工具
-        //初始化的时候获取到当前扫描的对象
-        //processingEnv是父类定义的ProcessingEnvironment对象，其实就是init方法回传过来的
+    public synchronized void init(ProcessingEnvironment processingEnv) {
+        super.init(processingEnv);
+        mFiler = processingEnv.getFiler();
         mElementUtils = processingEnv.getElementUtils();
+        mMessager = processingEnv.getMessager();
     }
 
+    /**
+     * @return 指定哪些注解应该被注解处理器注册
+     */
+    @Override
+    public Set<String> getSupportedAnnotationTypes() {
+        Set<String> types = new LinkedHashSet<>();
+        types.add(BindView.class.getCanonicalName());
+        types.add(OnClick.class.getCanonicalName());
+        return types;
+    }
+
+    /**
+     * @return 指定使用的 Java 版本。通常返回 SourceVersion.latestSupported()。
+     */
     @Override
     public SourceVersion getSupportedSourceVersion() {
         return SourceVersion.latestSupported();
     }
 
-    //指明有哪些注解需要被扫描到，返回注解的路径
+    private Map<String, AnnotatedClass> mAnnotatedClassMap = new HashMap<>();
+
     @Override
-    public Set<String> getSupportedAnnotationTypes() {
-        //大部分class而已getName、getCanonicalNam这两个方法没有什么不同的。
-        //但是对于array或内部类等就不一样了。
-        //getName返回的是[[Ljava.lang.String之类的表现形式，
-        //getCanonicalName返回的就是跟我们声明类似的形式。
-        HashSet<String> supportTypes = new LinkedHashSet<>();
-        supportTypes.add(BindView.class.getCanonicalName());
-        return supportTypes;
-        //因为兼容的原因，特别是针对Android平台，建议使用重载getSupportedAnnotationTypes()方法替代默认使用注解实现
+    public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+        mAnnotatedClassMap.clear();
+
+        try {
+            processBindView(roundEnv);
+            processOnClick(roundEnv);
+        } catch (IllegalArgumentException e) {
+            error(e.getMessage());
+            return true; // stop process
+        }
+
+        for (AnnotatedClass annotatedClass : mAnnotatedClassMap.values()) {
+            try {
+                info("Generating file for %s", annotatedClass.getFullClassName());
+                annotatedClass.generateFinder().writeTo(mFiler);
+            } catch (IOException e) {
+                error("Generate file failed, reason: %s", e.getMessage());
+                return true;
+            }
+        }
+        return true;
     }
 
-    @Override
-    public boolean process(Set<? extends TypeElement> set, RoundEnvironment roundEnvironment) {
-        //扫描整个工程   找出含有BindView注解的元素
-        //找到所有带有BindView注解的类，生成对应的****_ViewBinding类
-        Set<? extends Element> elements =
-                roundEnvironment.getElementsAnnotatedWith(BindView.class);
-        //遍历元素
-        for (Element element : elements) {
-            //BindView限定了只能属性使用，这里强转为VariableElement，如果是在类上面的，那么就是typeElement
-            VariableElement variableElement = (VariableElement) element;
-            //返回此元素直接封装（非严格意义上）的元素。
-            //类或接口被认为用于封装它直接声明的字段、方法、构造方法和成员类型
-            //这里就是获取封装属性元素的类元素
-            TypeElement classElement = (TypeElement) variableElement.getEnclosingElement();
-            //获取简单类名
-            String fullClassName = classElement.getQualifiedName().toString();
-            //里面放的是BinderClassCreator，关键生成***_ViewBinding类在里面生成的
-            BinderClassCreator creator = mCreatorMap.get(fullClassName);
-            if (creator == null) {
-                creator = new BinderClassCreator(mElementUtils.getPackageOf(classElement),
-                        classElement);
-                //生成之后就放到map中，方便下次使用
-                mCreatorMap.put(fullClassName, creator);
-
-            }
-            //获取元素注解
-            BindView bindAnnotation = variableElement.getAnnotation(BindView.class);
-            //注解值
-            int id = bindAnnotation.value();
-            creator.putElement(id, variableElement);
+    private void processBindView(RoundEnvironment roundEnv) throws IllegalArgumentException {
+        for (Element element : roundEnv.getElementsAnnotatedWith(BindView.class)) {
+            // TODO: 16/8/4 检查 字段 的修饰符
+            AnnotatedClass annotatedClass = getAnnotatedClass(element);
+            BindViewField field = new BindViewField(element);
+            annotatedClass.addField(field);
         }
-        for (String key : mCreatorMap.keySet()) {
-            BinderClassCreator binderClassCreator = mCreatorMap.get(key);
-            //通过javapoet构建生成Java类文件
-            //第一个参数传入包名
-            //第二个参数传入TypeSpec
-            JavaFile javaFile = JavaFile.builder(binderClassCreator.getPackageName(),
-                    binderClassCreator.generateJavaCode()).build();
-            try {
-                javaFile.writeTo(processingEnv.getFiler());
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+    }
 
+    private void processOnClick(RoundEnvironment roundEnv) {
+        for (Element element : roundEnv.getElementsAnnotatedWith(OnClick.class)) {
+            AnnotatedClass annotatedClass = getAnnotatedClass(element);
+            OnClickMethod method = new OnClickMethod(element);
+            annotatedClass.addMethod(method);
         }
-        return false;
+    }
+
+    private AnnotatedClass getAnnotatedClass(Element element) {
+        TypeElement classElement = (TypeElement) element.getEnclosingElement();
+        String fullClassName = classElement.getQualifiedName().toString();
+        AnnotatedClass annotatedClass = mAnnotatedClassMap.get(fullClassName);
+        if (annotatedClass == null) {
+            annotatedClass = new AnnotatedClass(classElement, mElementUtils);
+            mAnnotatedClassMap.put(fullClassName, annotatedClass);
+        }
+        return annotatedClass;
+    }
+
+    private void error(String msg, Object... args) {
+        mMessager.printMessage(Diagnostic.Kind.ERROR, String.format(msg, args));
+    }
+
+    private void info(String msg, Object... args) {
+        mMessager.printMessage(Diagnostic.Kind.NOTE, String.format(msg, args));
     }
 }
