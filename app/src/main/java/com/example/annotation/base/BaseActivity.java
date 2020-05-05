@@ -6,6 +6,8 @@ import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.view.Window;
 
+import java.text.ParseException;
+
 public abstract class BaseActivity extends Activity {
 
     protected Context mContext;
@@ -17,14 +19,18 @@ public abstract class BaseActivity extends Activity {
         setContentView(getLayoutID());
         mContext = this;
         initView();
-        initData();
+        try {
+            initData();
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
     }
 
     protected abstract int getLayoutID();
 
     protected abstract void initView();
 
-    protected abstract void initData();
+    protected abstract void initData() throws ParseException;
 
 
 

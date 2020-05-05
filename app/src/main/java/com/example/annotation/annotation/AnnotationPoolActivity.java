@@ -6,6 +6,8 @@ import android.view.View;
 import com.example.annotation.R;
 import com.example.annotation.base.BaseActivity;
 
+
+@Deprecated
 public class AnnotationPoolActivity extends BaseActivity {
 
     @Override
