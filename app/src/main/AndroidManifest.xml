@@ -24,6 +24,7 @@
         <activity android:name=".annotation.AnnotationPoolActivity" />
         <activity android:name=".annotation.AnnotationTestActivity" />
         <activity android:name=".annotation.MyButterKnifeActivity" />
+        <activity android:name=".proxy.InjectActivity" />
     </application>
 
 </manifest>

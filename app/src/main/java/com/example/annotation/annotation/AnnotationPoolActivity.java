@@ -5,6 +5,7 @@ import android.view.View;
 
 import com.example.annotation.R;
 import com.example.annotation.base.BaseActivity;
+import com.example.annotation.proxy.InjectActivity;
 
 
 @Deprecated
@@ -31,6 +32,8 @@ public class AnnotationPoolActivity extends BaseActivity {
             startActivity(new Intent(mContext,AnnotationTestActivity.class));
         }else if(id == R.id.btn_annotation_viewfinder){
             startActivity(new Intent(mContext,MyButterKnifeActivity.class));
+        }else if(id == R.id.btn_annotation_proxy){
+            startActivity(new Intent(mContext, InjectActivity.class));
         }
     }
 }

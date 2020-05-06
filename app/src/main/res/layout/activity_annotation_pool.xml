@@ -42,6 +42,20 @@
                 app:layout_constraintTop_toTopOf="parent"
                 tools:ignore="OnClick" />
 
+            <Button
+                android:id="@+id/btn_annotation_proxy"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:text="annotation_proxy"
+                android:layout_margin="10dp"
+                android:gravity="center"
+                android:onClick="onViewClick"
+                android:textColor="@color/colorPrimary"
+                android:background="#ddd"
+                app:layout_constraintTop_toTopOf="parent"
+                tools:ignore="OnClick" />
+
+
         </LinearLayout>
 
     </android.support.v4.widget.NestedScrollView>
