@@ -17,6 +17,10 @@ public class Utils {
 
     public static final String TAG = "ProxyTest";
 
+    /**
+     * 反射+动态代理+注解
+     * @param activity
+     */
     public static void injectEvent(Activity activity) {
         if (null == activity) {
             return;
@@ -66,6 +70,13 @@ public class Utils {
         }
     }
 
+    /**
+     * getDeclaredFields()： 可以获得class的成员变量
+     * getDeclaredMethods() ：可以获得class的成员方法
+     * getDeclaredConstructors()：可以获得class的构造函数
+     *
+     * 反射+注解
+     */
     public static void injectView(Activity activity) {
         if (null == activity) return;
 

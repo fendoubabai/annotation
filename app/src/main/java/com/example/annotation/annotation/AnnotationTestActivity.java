@@ -3,6 +3,7 @@ package com.example.annotation.annotation;
 import android.app.Activity;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
+import android.util.Log;
 import android.widget.TextView;
 
 import com.example.annotation.R;
@@ -32,7 +33,7 @@ public class AnnotationTestActivity extends Activity {
     private void initData() {
         Class<People> clazz = People.class;
         Document documents = clazz.getAnnotation(Document.class);
-        System.out.println(documents.value());
+        Log.e("tag","=========== " + documents.value());
         mTv1.setText(documents.value());
     }
 }
